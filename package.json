@@ -1,0 +1,14 @@
+{
+  "name": "Translate",
+  "version": "0.0.1",
+  "description": "Translation games",
+  "main": "Grunt-phrase-parser.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Ben Styles",
+  "license": "ISC",
+  "devDependencies": {
+    "grunt": "^0.4.5"
+  }
+}
