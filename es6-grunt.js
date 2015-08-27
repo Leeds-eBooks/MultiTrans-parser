@@ -83,13 +83,12 @@ export default function(grunt) {
     this.files
     .map(parse)
     .map(output => {
-      const Text = Parse.Object.extend('Text')
-      const q = new Parse.Query(Text)
-      try {
-        q.find().then(res => {
-          console.log(typeof res)
-        }).fail(console.log.bind(console))
-      } catch(e) {console.log(e)}
+      const Text = Parse.Object.extend('Text'),
+            q = new Parse.Query(Text)
+
+      q.find().then(res => {
+        console.log(typeof res)
+      }).fail(console.log.bind(console))
     })
   })
 
