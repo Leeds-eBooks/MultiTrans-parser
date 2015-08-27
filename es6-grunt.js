@@ -1,5 +1,7 @@
-import 'babel/polyfill'
+import 'babel/register'
 import os from 'os'
+import parseG from 'parse'; const Parse = parseG.Parse
+import * as keys from './keys'
 
 export default function(grunt) {
 
@@ -55,9 +57,9 @@ export default function(grunt) {
             s = startsWith(s, os.EOL)
             s = endsWith(s, os.EOL)
             return s.trim()
-          };
+          }
 
-    function theTask(file) {
+    function parse(file) {
       const f = file,
             srcFilePath = f.src[0],
             fileString = grunt.file.read(srcFilePath).trim(),
@@ -73,11 +75,23 @@ export default function(grunt) {
       const output = JSON.stringify(lineArray, null, 2)
       grunt.log.writeln(srcFilePath)
       grunt.file.write(f.dest, output)
+      return output
     }
 
-    this.files.forEach(theTask)
+    Parse.initialize(keys.appId, keys.jsKey)
+
+    this.files
+    .map(parse)
+    .map(output => {
+      const Text = Parse.Object.extend('Text')
+      const q = new Parse.Query(Text)
+      try {
+        q.find().then(res => {
+          console.log(typeof res)
+        }).fail(console.log.bind(console))
+      } catch(e) {console.log(e)}
+    })
   })
 
   grunt.registerTask('default', ['clean:dist', 'parse-phrases']);
-
 }
