@@ -1,0 +1,9 @@
+{
+  "sub": true,
+  "esnext": true,
+  "asi": true,
+  "undef": true,
+  "unused": "vars",
+  "varstmt": true,
+  "node": true
+}
