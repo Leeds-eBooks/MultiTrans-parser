@@ -1,96 +1,82 @@
 import 'babel/register'
 import os from 'os'
+import _ from 'underscore'
 import parseG from 'parse'; const Parse = parseG.Parse
 import * as keys from './keys'
+import Promise from 'bluebird'
+import fs from 'fs'
+import path from 'path'
+// import Xtrash from 'trash'; const trash = Promise.promisify(Xtrash)
+import Xglob from 'glob'; const glob  = Promise.promisify(Xglob)
 
-export default function(grunt) {
+// trash(['./dist'])
+// .catch(err => err.message.includes('t exist') ? Promise.resolve() : Promise.reject(err))
+// .then(() => {
 
-  grunt.loadNpmTasks('grunt-contrib-clean')
+Parse.initialize(keys.appId, keys.jsKey)
 
-  grunt.initConfig({
-    clean: {
-      dist: ["dist/"]
-    },
-    "parse-phrases": {
-      options: {
-        phrase_delimiter: '|',
-        option_delimiter: '`'
-      },
-      target1: {
-        files: [{
-          expand: true,
-          cwd: 'src/',
-          src: ['*.orig.txt'],
-          dest: 'dist/',
-          ext: '.orig.js'
-        }]
-      },
-      target2: {
-        files: [{
-          expand: true,
-          cwd: 'src/',
-          src: ['*.trans.txt'],
-          dest: 'dist/',
-          ext: '.trans.js'
-        }]
+const Text = Parse.Object.extend('Text'),
+
+  phraseDelimiter = '|',
+  optionDelimiter = '`',
+
+  cleanString = str => {
+    let s = str.trim()
+
+    const startsWith = (S, ch) => S.lastIndexOf(ch, 0) === 0 ? S.slice(1) : S
+    const endsWith = (S, ch) => S.substr(-1) === ch ? S.slice(0, -1) : S
+
+    s = startsWith(s, phraseDelimiter)
+    s = endsWith(s, phraseDelimiter)
+    s = startsWith(s, os.EOL)
+    s = endsWith(s, os.EOL)
+    return s.trim()
+  },
+
+  parse = p => {
+    const fileString = fs.readFileSync(p, {encoding: 'utf8'}).trim(),
+          [extract, title] = /#([\s\S]+?$)/m.exec(fileString),
+          cleaned = cleanString(fileString.replace(extract, '')),
+          lineArray = cleaned
+            .split(os.EOL)
+            .map(cleanString)
+            .map(v => v.split(phraseDelimiter).map(cleanString))
+            .map(v => ~p.indexOf('.trans.') ?
+              v.map(v => v.split(optionDelimiter).map(cleanString)) : v
+            )
+
+    const content = JSON.stringify(lineArray, null, 2)
+    return {content, title: title.trim(), path: path.basename(p, '.txt')}
+  }
+
+const q = new Parse.Query(Text)
+
+q.find()
+.then(res => res.map(item => ({
+  title: item.get('titleOrig'),
+  trans: item.get('titleTrans'),
+  obj: item
+})))
+.then(parseTexts => {
+  glob('./src/*').then(files => {
+    files.map(parse)
+    .map(({content, title, path}) => {
+      const titles = _.pluck(parseTexts, 'title'),
+            transTitles = _.pluck(parseTexts, 'trans'),
+            type = path.split('.')[1]
+
+      console.log(type);
+
+      if (titles.includes(title)) {
+        // text already exists, we're updating
+        // console.log(true)
+      } else {
+        // new text
+        // console.log(false)
       }
-    }
-  })
-
-  grunt.registerMultiTask('parse-phrases', function() {
-    const options = this.options({
-            phrase_delimiter: '|',
-            option_delimiter: '`'
-          }),
-
-          phraseDelimiter = options.phrase_delimiter,
-          optionDelimiter = options.option_delimiter,
-
-          cleanString = function(str) {
-            let s = str.trim()
-
-            const startsWith = (S, ch) => S.lastIndexOf(ch, 0) === 0 ? S.slice(1) : S
-            const endsWith = (S, ch) => S.substr(-1) === ch ? S.slice(0, -1) : S
-
-            s = startsWith(s, phraseDelimiter)
-            s = endsWith(s, phraseDelimiter)
-            s = startsWith(s, os.EOL)
-            s = endsWith(s, os.EOL)
-            return s.trim()
-          }
-
-    function parse(file) {
-      const f = file,
-            srcFilePath = f.src[0],
-            fileString = grunt.file.read(srcFilePath).trim(),
-            cleaned = cleanString(fileString),
-            lineArray = cleaned
-              .split(os.EOL)
-              .map(cleanString)
-              .map(v => v.split(phraseDelimiter).map(cleanString))
-              .map(v => ~srcFilePath.indexOf('.trans.') ?
-                v.map(v => v.split(optionDelimiter).map(cleanString)) : v
-              )
-
-      const output = JSON.stringify(lineArray, null, 2)
-      grunt.log.writeln(srcFilePath)
-      grunt.file.write(f.dest, output)
-      return output
-    }
-
-    Parse.initialize(keys.appId, keys.jsKey)
-
-    this.files
-    .map(parse)
-    .map(output => {
-      const Text = Parse.Object.extend('Text'),
-            q = new Parse.Query(Text)
-
-      q.find().then(res => {
-        console.log(typeof res)
-      }).fail(console.log.bind(console))
     })
   })
+})
+.fail(err => console.log(err))
 
-  grunt.registerTask('default', ['clean:dist', 'parse-phrases']);
-}
+// })
