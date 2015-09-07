@@ -36,7 +36,9 @@ var _path = require('path');
 
 var _path2 = _interopRequireDefault(_path);
 
-// import Xtrash from 'trash'; const trash = Promise.promisify(Xtrash)
+var _chalk = require('chalk');
+
+var _chalk2 = _interopRequireDefault(_chalk);
 
 var _glob = require('glob');
 
@@ -45,15 +47,14 @@ var _glob2 = _interopRequireDefault(_glob);
 var Parse = _parse2['default'].Parse;
 var glob = _bluebird2['default'].promisify(_glob2['default']);
 
-// trash(['./dist'])
-// .catch(err => err.message.includes('t exist') ? Promise.resolve() : Promise.reject(err))
-// .then(() => {
-
 Parse.initialize(keys.appId, keys.jsKey);
+
+var success = _underscore2['default'].compose(console.log.bind(console), _chalk2['default'].green);
+var error = _underscore2['default'].compose(console.log.bind(console), _chalk2['default'].red);
 
 var Text = Parse.Object.extend('Text'),
     phraseDelimiter = '|',
-    optionDelimiter = '`',
+    optionDelimiter = '~',
     cleanString = function cleanString(str) {
   var s = str.trim();
 
@@ -88,11 +89,15 @@ var Text = Parse.Object.extend('Text'),
     }) : v;
   });
 
-  var content = JSON.stringify(lineArray, null, 2);
-  return { content: content, title: title.trim(), path: _path2['default'].basename(p, '.txt') };
+  return {
+    content: lineArray,
+    title: title.trim(),
+    path: _path2['default'].basename(p, '.txt')
+  };
 };
 
 var q = new Parse.Query(Text);
+var newTexts = new Map();
 
 q.find().then(function (res) {
   return res.map(function (item) {
@@ -103,29 +108,78 @@ q.find().then(function (res) {
     };
   });
 }).then(function (parseTexts) {
-  glob('./src/*').then(function (files) {
-    files.map(parse).map(function (_ref) {
+  return glob('./src/*').then(function (files) {
+    return files.map(parse).map(function (_ref) {
       var content = _ref.content;
       var title = _ref.title;
       var path = _ref.path;
+      var titles = _underscore2['default'].pluck(parseTexts, 'title');
+      var transTitles = _underscore2['default'].pluck(parseTexts, 'trans');
+      var objs = _underscore2['default'].pluck(parseTexts, 'obj');
 
-      var titles = _underscore2['default'].pluck(parseTexts, 'title'),
-          transTitles = _underscore2['default'].pluck(parseTexts, 'trans'),
-          type = path.split('.')[1];
+      var _path$split = path.split('.');
 
-      console.log(type);
+      var _path$split2 = _slicedToArray(_path$split, 2);
 
-      if (titles.includes(title)) {
-        // text already exists, we're updating
-        // console.log(true)
+      var identifier = _path$split2[0];
+      var type = _path$split2[1];
+
+      console.log('type = ', type);
+      console.log('title = ', title);
+
+      var i = undefined;
+      if ((i = titles.indexOf(title)) > -1) {
+        // orig already exists, we're updating
+        var obj = objs[i];
+        obj.save({ orig: content }).then(function () {
+          return success('SAVE successful: ' + title);
+        }).fail(error);
+      } else if ((i = transTitles.indexOf(title)) > -1) {
+        // trans already exists, we're updating
+        var obj = objs[i];
+        obj.save({ trans: content }).then(function () {
+          return success('SAVE successful: ' + title);
+        }).fail(error);
       } else {
-          // new text
-          // console.log(false)
+        // new text
+
+        if (newTexts.has(identifier)) {
+          // already started to build this text
+          var text = newTexts.get(identifier);
+
+          if (type === 'orig') {
+            text.save({
+              orig: content,
+              titleOrig: title
+            }).then(function () {
+              return success('SAVE successful: ' + title);
+            }).fail(error);
+          } else {
+            text.save({
+              trans: content,
+              titleTrans: title
+            }).then(function () {
+              return success('SAVE successful: ' + title);
+            }).fail(error);
+          }
+        } else {
+          // brand new text that we haven't yet started to build
+          var text = new Text();
+          if (type === 'orig') {
+            text.set('orig', content);
+            text.set('titleOrig', title);
+          } else {
+            text.set('trans', content);
+            text.set('titleTrans', title);
+          }
+          newTexts.set(identifier, text);
+          console.log(newTexts.size);
         }
+      }
+
+      console.log(' ');
     });
   });
 }).fail(function (err) {
   return console.log(err);
 });
-
-// })
