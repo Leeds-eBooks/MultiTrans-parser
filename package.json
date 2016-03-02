@@ -6,7 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "prego": "babel es6-grunt.js --out-file go.js",
-    "go": "node go.js"
+    "go": "node go.js",
+    "single": "babel-node single.js"
   },
   "author": "Ben Styles",
   "license": "ISC",

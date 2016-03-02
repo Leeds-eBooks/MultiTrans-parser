@@ -7,7 +7,7 @@ import Promise from 'bluebird'
 import fs from 'fs'
 import path from 'path'
 import c from 'chalk'
-import Xglob from 'glob'; const glob  = Promise.promisify(Xglob)
+import Xglob from 'glob'; const glob = Promise.promisify(Xglob)
 
 Parse.initialize(keys.appId, keys.jsKey)
 
