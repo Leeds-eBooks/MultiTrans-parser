@@ -5,8 +5,6 @@
   "main": "Grunt-phrase-parser.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "prego": "babel es6-grunt.js --out-file go.js",
-    "go": "node go.js",
     "single": "babel-node single.js"
   },
   "author": "Ben Styles",
@@ -14,11 +12,6 @@
   "devDependencies": {},
   "dependencies": {
     "babel": "^5.8.21",
-    "bluebird": "^2.9.34",
     "chalk": "^1.1.1",
-    "glob": "^5.0.14",
-    "parse": "^1.5.0",
-    "trash": "^2.0.0",
-    "underscore": "^1.8.3"
   }
 }
